@@ -126,7 +126,7 @@ async function put_s3(event){
     console.log("ls result3:" + result3);
     
     //******************************************************* */
-    // Google Speech to Text でテキストへの変換
+    // Google Speech to Text でテキストへの変換-ユーザ側
     //******************************************************* */
 		
 	const data = fs.readFileSync(dstPath);
@@ -172,7 +172,7 @@ async function put_s3(event){
 	// add ↓20181221
     
     //******************************************************* */
-    // Google Speech to Text でテキストへの変換
+    // Google Speech to Text でテキストへの変換-オペレータ側
     //******************************************************* */
 		
 	const data2 = fs.readFileSync(dstPath2);
@@ -231,9 +231,9 @@ async function put_s3(event){
 	const rate = 16000;
 
 	var body = '';
-	let message3 = '';
+	let message3 = ''; //ユーザ側発話
 	var body2 = '';//add 20181221
-	let message4 = '';//add 20181221
+	let message4 = '';//add 20181221 オペレータ側発話
 
 	var CRLF = '\r\n';
 	var form_speech = new FormData();
@@ -515,8 +515,10 @@ async function put_s3(event){
 	console.log("kind_of_bussiness:" + bussiness);
 	console.log("kind_of_occupation:" + occupation);
 	console.log("occupation:" + occupation2);
+
+	//------------------------------------------------------------
 	
-	//文タイプ判定
+	//文タイプ判定------------------------------------------------
 	const options7 = {
     	method: "POST",
     	url:"https://api.ce-cotoha.com/api/dev/nlp/v1/sentence_type",
@@ -547,6 +549,99 @@ async function put_s3(event){
 
 	//---------------------------------------------------------
 
+	//言い淀み除去---------------------------------------------
+	const options11 = {
+    	method: "POST",
+    	url:"https://api.ce-cotoha.com/api/dev/nlp/beta/remove_filler",
+    	headers: {
+        	Authorization: Authoriz,
+        	charset: 'UTF-8',
+        	'Content-Type': 'application/json'
+    	},
+    	body: JSON.stringify({
+        	"text":message
+			"do_segment":"true"
+        })
+	};
+	
+	const response11 = await rp(options11);
+	const json11 = JSON.parse(response11);
+
+	for(var i=0; i<json11.result.length;i++){
+		try{
+			const message_remove += json11.result[i].fixed_setence;
+		}
+		catch(error){};
+	}
+
+	console.log("fixed_sentence:" + message_remove);
+
+	//---------------------------------------------------------
+
+	//音声認識誤り検知-----------------------------------------
+
+	const options12 = {
+    	method: "POST",
+    	url:"https://api.ce-cotoha.com/api/dev/nlp/beta/detect_misrecognition",
+    	headers: {
+        	Authorization: Authoriz,
+        	charset: 'UTF-8',
+        	'Content-Type': 'application/json'
+    	},
+    	body: JSON.stringify({
+        	"sentence":message
+        })
+	};
+
+	const response12 = await rp(options12);
+	const json12 = JSON.parse(response12);
+	
+	let message_rec = new Array(json12.result.candidates.length);
+	
+	for(var i=0; i<json12.result.candidates.length; i++){
+		try{
+			message_rec[i] = json12.result.candidates[i].form;
+		}
+		catch{};
+	}
+	
+	const message_rec_str = message_rec.join(',');
+	console.log("message_rec:" + message_rec_str);
+
+	//---------------------------------------------------------
+
+	//キーワード抽出-------------------------------------------
+	
+	const options13 = {
+    	method: "POST",
+    	url:"https://api.ce-cotoha.com/api/dev/nlp/v1/keyword",
+    	headers: {
+        	Authorization: Authoriz,
+        	charset: 'UTF-8',
+        	'Content-Type': 'application/json'
+    	},
+    	body: JSON.stringify({
+        	"document":message
+        })
+	};
+
+	const response13 = await rp(options13);
+	const json13 = JSON.parse(response13);
+	
+	let message_key = new Array(json13.rseult.length);
+
+	for(var i=0; i<json13.result.length; i++){
+		try{
+			message_key[i] = json13.result[i].form;
+		}
+		catch(error){};
+	}
+
+	const message_key_str = message_key.join(',');
+
+	console.log("message_key:" + message_key_str);
+	
+	//---------------------------------------------------------
 
     //******************************************************* */
     // 電話番号の取得
