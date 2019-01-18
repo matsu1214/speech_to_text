@@ -18,7 +18,7 @@ Resources:
           Ref: AICC1761519s3wavLogGroup
       Type: CloudWatchLogs
     Properties:
-      CodeUri: s3://aicc-1761519-5-s3wav-bkt/2a868f40f199d2fab527b9fab0b94ab3
+      CodeUri: s3://aicc-1761519-7-s3wav-bkt/768f29e96f7e84e603afd078ada569a1
       Handler: index.handler
       Role:
         Fn::GetAtt:

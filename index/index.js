@@ -559,7 +559,7 @@ async function put_s3(event){
         	'Content-Type': 'application/json'
     	},
     	body: JSON.stringify({
-        	"text":message
+        	"text": message,
 			"do_segment":"true"
         })
 	};
@@ -567,9 +567,13 @@ async function put_s3(event){
 	const response11 = await rp(options11);
 	const json11 = JSON.parse(response11);
 
-	for(var i=0; i<json11.result.length;i++){
+	const count = json11.result.length;
+
+	var message_remove = "";
+
+	for(var i=0; i<count;i++){
 		try{
-			const message_remove += json11.result[i].fixed_setence;
+			message_remove += json11.result[i].fixed_sentence;
 		}
 		catch(error){};
 	}
@@ -596,13 +600,13 @@ async function put_s3(event){
 	const response12 = await rp(options12);
 	const json12 = JSON.parse(response12);
 	
-	let message_rec = new Array(json12.result.candidates.length);
+	var message_rec = new Array(Object.keys(json12.result.candidates).length);
 	
-	for(var i=0; i<json12.result.candidates.length; i++){
+	for(var i=0; i<Object.keys(json12.result.candidates).length; i++){
 		try{
 			message_rec[i] = json12.result.candidates[i].form;
 		}
-		catch{};
+		catch(error){};
 	}
 	
 	const message_rec_str = message_rec.join(',');
@@ -621,20 +625,20 @@ async function put_s3(event){
         	'Content-Type': 'application/json'
     	},
     	body: JSON.stringify({
-        	"document":message
+        	"document": message
         })
 	};
 
 	const response13 = await rp(options13);
 	const json13 = JSON.parse(response13);
 	
-	let message_key = new Array(json13.rseult.length);
+	var message_key = new Array(Object.keys(json13.result).length);
 
-	for(var i=0; i<json13.result.length; i++){
+	for(var i=0; i<Object.keys(json13.result).length; i++){
 		try{
 			message_key[i] = json13.result[i].form;
 		}
-		catch(error){};
+			catch(error){};
 	}
 
 	const message_key_str = message_key.join(',');
@@ -680,7 +684,10 @@ async function put_s3(event){
 			  		"kind_of_occupation__c": occupation,
 			  		"occupation__c": occupation2,
 			  		"modality__c": modality,
-			  		"dialog_act__c": dialogact
+			  		"dialog_act__c": dialogact,
+					"fixed_sentence__c": message_remove,
+					"detect_misrecognition__c": message_rec_str,
+					"keyword__c":	message_key_str
             	}
           	}
 		})
@@ -689,7 +696,9 @@ async function put_s3(event){
     console.log('SFDC:' + response3);
     
     console.log('phoneNumber:' + phoneNumber);
-    console.log('Message_GCP:' + message);
+    
+	//ユーザ側メッセージ
+	console.log('Message_GCP:' + message);
 	console.log('Message_COTOHA' + message3);
     return {"outputData": "put_S3"};
 }
